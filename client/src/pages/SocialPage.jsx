@@ -360,8 +360,48 @@ export default function SocialPage() {
                 Selecione um grupo para visualizar hábitos e fazer check-in de hoje.
               </p>
             ) : (
-              <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-                <div className="space-y-3">
+              <div className="space-y-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                  <p className="mb-3 text-sm font-semibold">Detalhes do grupo</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Participantes
+                      </p>
+                      <ul className="space-y-1">
+                        {selectedGroup.group.members.map((member) => (
+                          <li
+                            key={member._id}
+                            className="rounded-lg bg-white px-2 py-1 text-sm dark:bg-white/5"
+                          >
+                            {member.name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Hábitos definidos
+                      </p>
+                      <ul className="space-y-1">
+                        {selectedGroup.group.habits.map((habit) => (
+                          <li
+                            key={habit.id}
+                            className="flex items-center justify-between rounded-lg bg-white px-2 py-1 text-sm dark:bg-white/5"
+                          >
+                            <span>{habit.name}</span>
+                            <span className="text-xs font-semibold text-brand-600 dark:text-brand-300">
+                              {habit.points} pts
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+                  <div className="space-y-3">
                   <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                     Hábitos do grupo (check-in de hoje)
                   </p>
@@ -397,9 +437,9 @@ export default function SocialPage() {
                   <button className="btn-primary w-full" onClick={saveCheckin}>
                     <ShieldCheck className="h-4 w-4" /> Salvar check-in de hoje
                   </button>
-                </div>
+                  </div>
 
-                <div className="space-y-3">
+                  <div className="space-y-3">
                   <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                     Ranking de hoje (pontuação total + hábitos concluídos)
                   </p>
@@ -434,6 +474,7 @@ export default function SocialPage() {
                       ))}
                     </ol>
                   )}
+                  </div>
                 </div>
               </div>
             )}
