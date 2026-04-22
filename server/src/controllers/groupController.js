@@ -72,19 +72,59 @@ exports.getGroup = async (req, res) => {
   const today = todayKey();
   const todayCheckins = await GroupCheckin.find({ groupId: group._id, date: today });
   const myCheckin = todayCheckins.find((c) => String(c.userId) === String(req.user.id));
-  const ranking = group.members
-    .map((member) => {
-      const checkin = todayCheckins.find((c) => String(c.userId) === String(member._id));
-      return {
-        userId: member._id,
-        name: member.name,
-        score: checkin?.score || 0,
-        completedHabits: (checkin?.completions || []).filter((c) => c.done).length,
-      };
-    })
-    .sort((a, b) => b.score - a.score);
 
-  return res.json({ group, ranking, date: today, myCheckin, meId: req.user.id });
+  const memberStatus = group.members.map((member) => {
+    const checkin = todayCheckins.find((c) => String(c.userId) === String(member._id));
+    const completionsMap = {};
+    (checkin?.completions || []).forEach((comp) => {
+      completionsMap[comp.habitId] = Boolean(comp.done);
+    });
+    const completed = group.habits.filter((h) => completionsMap[h.id]).length;
+    return {
+      userId: String(member._id),
+      name: member.name,
+      email: member.email,
+      score: checkin?.score || 0,
+      hasCheckedIn: Boolean(checkin),
+      completions: completionsMap,
+      completedHabits: completed,
+      totalHabits: group.habits.length,
+      progress: group.habits.length
+        ? Math.round((completed / group.habits.length) * 100)
+        : 0,
+    };
+  });
+
+  const habitBoard = group.habits.map((habit) => {
+    const completedBy = memberStatus.filter((m) => m.completions[habit.id]);
+    const pendingBy = memberStatus.filter((m) => !m.completions[habit.id]);
+    return {
+      id: habit.id,
+      name: habit.name,
+      points: habit.points || 10,
+      completedBy: completedBy.map((m) => ({ userId: m.userId, name: m.name })),
+      pendingBy: pendingBy.map((m) => ({ userId: m.userId, name: m.name })),
+      completedCount: completedBy.length,
+      totalMembers: group.members.length,
+      progress: group.members.length
+        ? Math.round((completedBy.length / group.members.length) * 100)
+        : 0,
+    };
+  });
+
+  const ranking = [...memberStatus].sort(
+    (a, b) => b.score - a.score || b.completedHabits - a.completedHabits
+  );
+
+  return res.json({
+    group,
+    ranking,
+    habitBoard,
+    memberStatus,
+    date: today,
+    myCheckin,
+    meId: req.user.id,
+  });
 };
 
 exports.addMember = async (req, res) => {
