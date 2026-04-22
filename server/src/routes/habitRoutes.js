@@ -11,9 +11,10 @@ const {
   listSpiritualTemplates,
   createSpiritualTemplate,
   removeSpiritualTemplate,
-  getWorkoutToday,
-  checkinWorkoutToday,
-  undoWorkoutToday,
+  getFitnessToday,
+  updateFitnessToday,
+  addFitnessCustomHabit,
+  removeFitnessCustomHabit,
 } = require("../controllers/habitController");
 
 const router = express.Router();
@@ -29,8 +30,9 @@ router.put("/spiritual/today", updateSpiritualToday);
 router.get("/spiritual/templates", listSpiritualTemplates);
 router.post("/spiritual/templates", createSpiritualTemplate);
 router.delete("/spiritual/templates/:id", removeSpiritualTemplate);
-router.get("/workout/today", getWorkoutToday);
-router.post("/workout/checkin", checkinWorkoutToday);
-router.post("/workout/undo", undoWorkoutToday);
+router.get("/fitness/today", getFitnessToday);
+router.put("/fitness/today", updateFitnessToday);
+router.post("/fitness/custom", addFitnessCustomHabit);
+router.delete("/fitness/custom", removeFitnessCustomHabit);
 
 module.exports = router;

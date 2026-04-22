@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, CheckCircle2, Dumbbell, Flame, HandHeart, Plus, Sparkles, Trash2 } from "lucide-react";
+import {
+  BookOpen,
+  CheckCircle2,
+  Dumbbell,
+  Flame,
+  HandHeart,
+  Plus,
+  Sparkles,
+  Trash2,
+  Apple,
+  Pill,
+  CandyOff,
+} from "lucide-react";
 import api from "../services/api";
 import PageHeader from "../components/PageHeader";
 import ProgressRing from "../components/ProgressRing";
@@ -16,9 +28,9 @@ export default function HabitsPage() {
   const [dashboard, setDashboard] = useState(null);
   const [spiritual, setSpiritual] = useState(null);
   const [templates, setTemplates] = useState([]);
-  const [workout, setWorkout] = useState(null);
+  const [fitness, setFitness] = useState(null);
   const [newTemplate, setNewTemplate] = useState("");
-  const [workoutForm, setWorkoutForm] = useState({ type: "", duration: "", note: "" });
+  const [newFitnessHabit, setNewFitnessHabit] = useState("");
 
   const loadDashboard = async () => {
     const { data } = await api.get("/habits/automation/dashboard");
@@ -34,13 +46,13 @@ export default function HabitsPage() {
     setTemplates(templateRes.data);
   };
 
-  const loadWorkout = async () => {
-    const { data } = await api.get("/habits/workout/today");
-    setWorkout(data);
+  const loadFitness = async () => {
+    const { data } = await api.get("/habits/fitness/today");
+    setFitness(data);
   };
 
   const reloadAll = async () => {
-    await Promise.all([loadDashboard(), loadSpiritual(), loadWorkout()]);
+    await Promise.all([loadDashboard(), loadSpiritual(), loadFitness()]);
   };
 
   useEffect(() => {
@@ -135,27 +147,72 @@ export default function HabitsPage() {
     loadDashboard();
   };
 
-  const checkinWorkout = async (event) => {
-    event.preventDefault();
-    await api.post("/habits/workout/checkin", {
+  const saveFitness = async (nextFitness) => {
+    setFitness((prev) => ({ ...prev, fitness: nextFitness }));
+    await api.put("/habits/fitness/today", { fitness: nextFitness });
+    loadFitness();
+    loadDashboard();
+  };
+
+  const toggleFitnessFlag = (key, value) => {
+    const next = { ...fitness.fitness, [key]: value };
+    saveFitness(next);
+  };
+
+  const toggleWorkoutDone = (done) => {
+    const next = {
+      ...fitness.fitness,
       workout: {
-        type: workoutForm.type,
-        duration: Number(workoutForm.duration || 0),
-        note: workoutForm.note,
+        ...fitness.fitness.workout,
+        done,
       },
-    });
-    setWorkoutForm({ type: "", duration: "", note: "" });
-    loadWorkout();
+    };
+    saveFitness(next);
+  };
+
+  const updateWorkoutField = (key, value) => {
+    setFitness((prev) => ({
+      ...prev,
+      fitness: {
+        ...prev.fitness,
+        workout: {
+          ...prev.fitness.workout,
+          [key]: key === "duration" ? Number(value || 0) : value,
+        },
+      },
+    }));
+  };
+
+  const persistWorkoutFields = async () => {
+    await api.put("/habits/fitness/today", { fitness: fitness.fitness });
+  };
+
+  const toggleFitnessCustom = (habitId, done) => {
+    const next = {
+      ...fitness.fitness,
+      custom: (fitness.fitness.custom || []).map((item) =>
+        item.habitId === habitId ? { ...item, done } : item
+      ),
+    };
+    saveFitness(next);
+  };
+
+  const addFitnessCustom = async (event) => {
+    event.preventDefault();
+    if (!newFitnessHabit.trim()) return;
+    await api.post("/habits/fitness/custom", { name: newFitnessHabit.trim() });
+    setNewFitnessHabit("");
+    loadFitness();
     loadDashboard();
   };
 
-  const undoWorkout = async () => {
-    await api.post("/habits/workout/undo");
-    loadWorkout();
+  const removeFitnessCustom = async (habitId) => {
+    await api.delete("/habits/fitness/custom", { data: { habitId } });
+    loadFitness();
     loadDashboard();
   };
 
-  if (!dashboard || !spiritual || !workout) {
+  if (!dashboard || !spiritual || !fitness) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
@@ -178,8 +235,8 @@ export default function HabitsPage() {
           <button className={tabButton(tab === "spiritual")} onClick={() => setTab("spiritual")}>
             Vida com Deus
           </button>
-          <button className={tabButton(tab === "workout")} onClick={() => setTab("workout")}>
-            Treinos
+          <button className={tabButton(tab === "fitness")} onClick={() => setTab("fitness")}>
+            Fitness (hábitos saudáveis)
           </button>
         </div>
       </div>
@@ -216,6 +273,10 @@ export default function HabitsPage() {
             <Stat title="Leitura bíblica" value={`${dashboard.monthly.bibleReadDays} dias`} />
             <Stat title="Oração" value={`${dashboard.monthly.prayerDays} dias`} />
             <Stat title="Treinos" value={`${dashboard.monthly.workoutDays} dias`} />
+            <Stat title="Comi corretamente" value={`${dashboard.monthly.ateCorretamenteDays || 0} dias`} />
+            <Stat title="Sem doce" value={`${dashboard.monthly.semDoceDays || 0} dias`} />
+            <Stat title="Creatina" value={`${dashboard.monthly.creatinaDays || 0} dias`} />
+            <Stat title="Whey" value={`${dashboard.monthly.wheyDays || 0} dias`} />
           </div>
 
           <div className="card">
@@ -374,73 +435,132 @@ export default function HabitsPage() {
         </section>
       ) : null}
 
-      {tab === "workout" ? (
+      {tab === "fitness" ? (
         <section className="space-y-4">
           <div className="card-glow flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                Check-in de treino
+                Módulo Fitness completo
               </p>
               <p className="mt-2 text-3xl font-bold">
-                {workout.workout.checkedIn ? "Concluído ✅" : "Pendente"}
+                {fitness.fitness.workout.done ? "Dia fitness em progresso ✅" : "Pendente"}
               </p>
-              <p className="text-sm text-white/70">Um registro rápido e pronto.</p>
+              <p className="text-sm text-white/70">Treino + alimentação + suplementação.</p>
             </div>
             <Dumbbell className="h-10 w-10 text-white/80" />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-            <form onSubmit={checkinWorkout} className="card space-y-3">
-              <h3 className="text-lg font-semibold">Registrar treino de hoje</h3>
-              <input
-                className="input"
-                placeholder="Tipo de treino (opcional)"
-                value={workoutForm.type}
-                onChange={(e) => setWorkoutForm((prev) => ({ ...prev, type: e.target.value }))}
-              />
-              <input
-                className="input"
-                type="number"
-                min="0"
-                placeholder="Duração em minutos (opcional)"
-                value={workoutForm.duration}
-                onChange={(e) =>
-                  setWorkoutForm((prev) => ({ ...prev, duration: e.target.value }))
-                }
-              />
-              <textarea
-                className="input min-h-[90px]"
-                placeholder="Observação rápida (opcional)"
-                value={workoutForm.note}
-                onChange={(e) => setWorkoutForm((prev) => ({ ...prev, note: e.target.value }))}
-              />
-              <div className="flex flex-wrap gap-2">
-                <button className="btn-primary">Check-in de treino</button>
-                {workout.workout.checkedIn ? (
-                  <button type="button" className="btn-ghost" onClick={undoWorkout}>
-                    Desfazer check-in
-                  </button>
-                ) : null}
+          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+            <div className="card space-y-3">
+              <h3 className="text-lg font-semibold">Checklist fitness do dia</h3>
+              <div className="grid gap-2">
+                <ToggleRow
+                  icon={Dumbbell}
+                  label="Treinei hoje"
+                  active={fitness.fitness.workout.done}
+                  onToggle={(value) => toggleWorkoutDone(value)}
+                />
+                <ToggleRow
+                  icon={Apple}
+                  label="Comi corretamente"
+                  active={fitness.fitness.ateCorretamente}
+                  onToggle={(value) => toggleFitnessFlag("ateCorretamente", value)}
+                />
+                <ToggleRow
+                  icon={CandyOff}
+                  label="Não comi doce"
+                  active={fitness.fitness.semDoce}
+                  onToggle={(value) => toggleFitnessFlag("semDoce", value)}
+                />
+                <ToggleRow
+                  icon={Pill}
+                  label="Tomei creatina"
+                  active={fitness.fitness.creatina}
+                  onToggle={(value) => toggleFitnessFlag("creatina", value)}
+                />
+                <ToggleRow
+                  icon={Pill}
+                  label="Tomei whey"
+                  active={fitness.fitness.whey}
+                  onToggle={(value) => toggleFitnessFlag("whey", value)}
+                />
               </div>
-            </form>
 
-            <div className="card space-y-2">
-              <h3 className="text-lg font-semibold">Status de hoje</h3>
-              <p className="text-sm">
-                <strong>Marcado:</strong> {workout.workout.checkedIn ? "Sim" : "Não"}
-              </p>
-              <p className="text-sm">
-                <strong>Tipo:</strong> {workout.workout.type || "—"}
-              </p>
-              <p className="text-sm">
-                <strong>Duração:</strong>{" "}
-                {workout.workout.duration ? `${workout.workout.duration} min` : "—"}
-              </p>
-              <p className="text-sm">
-                <strong>Observação:</strong> {workout.workout.note || "—"}
-              </p>
+              <div className="mt-3 rounded-xl border border-slate-200 p-3 dark:border-white/10">
+                <p className="mb-2 text-sm font-semibold">Detalhes do treino</p>
+                <input
+                  className="input mb-2"
+                  placeholder="Tipo (musculação, cardio, corrida...)"
+                  value={fitness.fitness.workout.type}
+                  onChange={(e) => updateWorkoutField("type", e.target.value)}
+                  onBlur={persistWorkoutFields}
+                />
+                <input
+                  className="input mb-2"
+                  type="number"
+                  min="0"
+                  placeholder="Duração em minutos (ex: 60, 120)"
+                  value={fitness.fitness.workout.duration || ""}
+                  onChange={(e) => updateWorkoutField("duration", e.target.value)}
+                  onBlur={persistWorkoutFields}
+                />
+                <textarea
+                  className="input min-h-[70px]"
+                  placeholder="Observação do treino"
+                  value={fitness.fitness.workout.note}
+                  onChange={(e) => updateWorkoutField("note", e.target.value)}
+                  onBlur={persistWorkoutFields}
+                />
+              </div>
+            </div>
+
+            <div className="card space-y-3">
+              <h3 className="text-lg font-semibold">Hábitos fitness personalizados</h3>
+              <form onSubmit={addFitnessCustom} className="flex gap-2">
+                <input
+                  className="input flex-1"
+                  placeholder="Ex.: 2L de água, 10k passos"
+                  value={newFitnessHabit}
+                  onChange={(e) => setNewFitnessHabit(e.target.value)}
+                />
+                <button className="btn-primary">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </form>
+
+              {(fitness.fitness.custom || []).length === 0 ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Adicione hábitos para sua vida fitness ideal.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {fitness.fitness.custom.map((item) => (
+                    <li
+                      key={item.habitId}
+                      className="flex items-center justify-between rounded-xl border border-slate-200 p-3 dark:border-white/10"
+                    >
+                      <p className="font-semibold">{item.name}</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="btn-ghost px-2 py-1 text-xs"
+                          onClick={() => toggleFitnessCustom(item.habitId, !item.done)}
+                        >
+                          {item.done ? "Concluído" : "Marcar"}
+                        </button>
+                        <button
+                          className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-500"
+                          onClick={() => removeFitnessCustom(item.habitId)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Esse registro alimenta automaticamente o Dashboard de Hábitos.
+                Todos os itens desta aba alimentam automaticamente o Dashboard de Hábitos.
               </p>
             </div>
           </div>
@@ -455,6 +575,20 @@ function Stat({ title, value }) {
     <div className="card">
       <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">{title}</p>
       <p className="mt-1 text-2xl font-bold">{value}</p>
+    </div>
+  );
+}
+
+function ToggleRow({ icon: Icon, label, active, onToggle }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-slate-200 p-3 dark:border-white/10">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-brand-500" />
+        <p className="font-semibold">{label}</p>
+      </div>
+      <button className="btn-ghost px-2 py-1 text-xs" onClick={() => onToggle(!active)}>
+        {active ? "Concluído" : "Marcar"}
+      </button>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   Crown,
@@ -25,7 +25,7 @@ const makeDefaultHabits = () => [
 ];
 
 export default function SocialPage() {
-  const [tab, setTab] = useState("friends");
+  const [tab, setTab] = useState("groups");
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState({ incoming: [], outgoing: [] });
   const [friendEmail, setFriendEmail] = useState("");
@@ -33,8 +33,6 @@ export default function SocialPage() {
   const [groups, setGroups] = useState([]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [selectedGroup, setSelectedGroup] = useState(null);
-  const [rankingRange, setRankingRange] = useState("daily");
-  const [ranking, setRanking] = useState([]);
 
   const [groupForm, setGroupForm] = useState({
     name: "",
@@ -61,12 +59,8 @@ export default function SocialPage() {
 
   const loadGroupDetails = async (groupId = selectedGroupId) => {
     if (!groupId) return;
-    const [details, rankRes] = await Promise.all([
-      api.get(`/groups/${groupId}`),
-      api.get(`/groups/${groupId}/ranking`, { params: { range: rankingRange } }),
-    ]);
+    const details = await api.get(`/groups/${groupId}`);
     setSelectedGroup(details.data);
-    setRanking(rankRes.data.ranking);
     const mine = details.data.group.habits.map((habit) => ({
       habitId: habit.id,
       done: false,
@@ -81,13 +75,7 @@ export default function SocialPage() {
 
   useEffect(() => {
     loadGroupDetails();
-  }, [selectedGroupId, rankingRange]);
-
-  const groupHabitMap = useMemo(() => {
-    const map = new Map();
-    (selectedGroup?.group?.habits || []).forEach((habit) => map.set(habit.id, habit));
-    return map;
-  }, [selectedGroup]);
+  }, [selectedGroupId]);
 
   const sendRequest = async (event) => {
     event.preventDefault();
@@ -161,10 +149,7 @@ export default function SocialPage() {
             Amigos
           </button>
           <button className={tabStyle(tab === "groups")} onClick={() => setTab("groups")}>
-            Grupos
-          </button>
-          <button className={tabStyle(tab === "ranking")} onClick={() => setTab("ranking")}>
-            Ranking
+            Meus grupos
           </button>
         </div>
       </div>
@@ -362,106 +347,95 @@ export default function SocialPage() {
               </button>
             </div>
           </div>
-        </section>
-      ) : null}
+          <div className="card xl:col-span-2">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Grupo em foco: {selectedGroup?.group?.name || "—"}</h3>
+              <span className="chip">
+                {selectedGroup?.group?.members?.length || 0} participantes
+              </span>
+            </div>
 
-      {tab === "ranking" ? (
-        <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-          <div className="card space-y-4">
-            <h3 className="text-lg font-semibold">Meu check-in diário</h3>
             {!selectedGroup?.group ? (
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Selecione ou crie um grupo para registrar seus hábitos.
+                Selecione um grupo para visualizar hábitos e fazer check-in de hoje.
               </p>
             ) : (
-              <>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Grupo: <strong>{selectedGroup.group.name}</strong>
-                </p>
-                <ul className="space-y-2">
-                  {selectedGroup.group.habits.map((habit) => {
-                    const checked = myCheckins.find((c) => c.habitId === habit.id)?.done;
-                    return (
-                      <li
-                        key={habit.id}
-                        className="flex items-center justify-between rounded-xl bg-slate-100 p-3 dark:bg-white/5"
-                      >
-                        <div>
-                          <p className="font-semibold">{habit.name}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {habit.points} pontos
-                          </p>
-                        </div>
-                        <button className="btn-ghost" onClick={() => toggleHabitDone(habit.id)}>
-                          {checked ? (
-                            <>
-                              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Feito
-                            </>
-                          ) : (
-                            <>
-                              <Target className="h-4 w-4" /> Marcar
-                            </>
-                          )}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <button className="btn-primary w-full" onClick={saveCheckin}>
-                  <ShieldCheck className="h-4 w-4" /> Salvar check-in de hoje
-                </button>
-              </>
-            )}
-          </div>
+              <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    Hábitos do grupo (check-in de hoje)
+                  </p>
+                  <ul className="space-y-2">
+                    {selectedGroup.group.habits.map((habit) => {
+                      const checked = myCheckins.find((c) => c.habitId === habit.id)?.done;
+                      return (
+                        <li
+                          key={habit.id}
+                          className="flex items-center justify-between rounded-xl bg-slate-100 p-3 dark:bg-white/5"
+                        >
+                          <div>
+                            <p className="font-semibold">{habit.name}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {habit.points} pontos
+                            </p>
+                          </div>
+                          <button className="btn-ghost" onClick={() => toggleHabitDone(habit.id)}>
+                            {checked ? (
+                              <>
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Feito
+                              </>
+                            ) : (
+                              <>
+                                <Target className="h-4 w-4" /> Marcar
+                              </>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <button className="btn-primary w-full" onClick={saveCheckin}>
+                    <ShieldCheck className="h-4 w-4" /> Salvar check-in de hoje
+                  </button>
+                </div>
 
-          <div className="card space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Ranking competitivo</h3>
-              <div className="flex gap-2">
-                <button
-                  className={tabStyle(rankingRange === "daily")}
-                  onClick={() => setRankingRange("daily")}
-                >
-                  Diário
-                </button>
-                <button
-                  className={tabStyle(rankingRange === "weekly")}
-                  onClick={() => setRankingRange("weekly")}
-                >
-                  Semanal
-                </button>
-              </div>
-            </div>
-            {ranking.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Sem dados ainda. Façam os check-ins para iniciar a disputa.
-              </p>
-            ) : (
-              <ol className="space-y-2">
-                {ranking.map((item, index) => (
-                  <li
-                    key={item.userId}
-                    className="flex items-center justify-between rounded-xl bg-slate-100 p-3 dark:bg-white/5"
-                  >
-                    <div className="flex items-center gap-2">
-                      {index === 0 ? (
-                        <Crown className="h-4 w-4 text-amber-500" />
-                      ) : (
-                        <span className="text-xs font-bold text-slate-500">#{index + 1}</span>
-                      )}
-                      <div>
-                        <p className="font-semibold">{item.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Consistência: {item.consistency || 0}%
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-sm font-bold text-brand-600 dark:text-brand-300">
-                      {item.totalScore || item.score || 0} pts
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    Ranking de hoje (pontuação total + hábitos concluídos)
+                  </p>
+                  {(selectedGroup.ranking || []).length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Sem dados ainda para hoje.
                     </p>
-                  </li>
-                ))}
-              </ol>
+                  ) : (
+                    <ol className="space-y-2">
+                      {selectedGroup.ranking.map((item, index) => (
+                        <li
+                          key={item.userId}
+                          className="flex items-center justify-between rounded-xl bg-slate-100 p-3 dark:bg-white/5"
+                        >
+                          <div className="flex items-center gap-2">
+                            {index === 0 ? (
+                              <Crown className="h-4 w-4 text-amber-500" />
+                            ) : (
+                              <span className="text-xs font-bold text-slate-500">#{index + 1}</span>
+                            )}
+                            <div>
+                              <p className="font-semibold">{item.name}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Hábitos concluídos hoje: {item.completedHabits || 0}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-sm font-bold text-brand-600 dark:text-brand-300">
+                            {item.score || 0} pts
+                          </p>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </section>

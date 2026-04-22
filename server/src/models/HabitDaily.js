@@ -10,6 +10,15 @@ const customSpiritualSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const customFitnessSchema = new mongoose.Schema(
+  {
+    habitId: { type: String, required: true },
+    name: { type: String, required: true },
+    done: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
 const habitDailySchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -22,11 +31,18 @@ const habitDailySchema = new mongoose.Schema(
       oracao: { type: Boolean, default: false },
       custom: [customSpiritualSchema],
     },
-    workout: {
-      checkedIn: { type: Boolean, default: false },
-      type: { type: String, default: "" },
-      duration: { type: Number, default: 0 },
-      note: { type: String, default: "" },
+    fitness: {
+      workout: {
+        done: { type: Boolean, default: false },
+        type: { type: String, default: "" }, // musculacao, cardio, corrida...
+        duration: { type: Number, default: 0 }, // minutos
+        note: { type: String, default: "" },
+      },
+      ateCorretamente: { type: Boolean, default: false },
+      semDoce: { type: Boolean, default: false },
+      creatina: { type: Boolean, default: false },
+      whey: { type: Boolean, default: false },
+      custom: [customFitnessSchema],
       checkedAt: { type: Date, default: null },
     },
   },
