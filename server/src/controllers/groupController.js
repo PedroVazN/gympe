@@ -17,7 +17,10 @@ const isFriend = async (a, b) => {
 };
 
 const ensureMember = (group, userId) =>
-  group.members.some((m) => String(m) === String(userId));
+  group.members.some((m) => {
+    const memberId = m?._id || m;
+    return String(memberId) === String(userId);
+  });
 
 const computeScore = (habits, completions) => {
   const map = new Map((completions || []).map((c) => [c.habitId, Boolean(c.done)]));

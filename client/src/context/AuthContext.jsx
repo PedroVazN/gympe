@@ -7,6 +7,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const isValidUser = (value) =>
+    Boolean(value && typeof value === "object" && (value.id || value._id) && value.email);
+
   useEffect(() => {
     const token = localStorage.getItem("gympe_token");
     if (!token) {
@@ -15,19 +18,35 @@ export function AuthProvider({ children }) {
     }
     api
       .get("/auth/me")
-      .then((response) => setUser(response.data))
-      .catch(() => localStorage.removeItem("gympe_token"))
+      .then((response) => {
+        if (isValidUser(response.data)) {
+          setUser(response.data);
+          return;
+        }
+        localStorage.removeItem("gympe_token");
+        setUser(null);
+      })
+      .catch(() => {
+        localStorage.removeItem("gympe_token");
+        setUser(null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const login = async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
+    if (!data?.token || !isValidUser(data.user)) {
+      throw new Error("Resposta de autenticação inválida.");
+    }
     localStorage.setItem("gympe_token", data.token);
     setUser(data.user);
   };
 
   const register = async (name, email, password) => {
     const { data } = await api.post("/auth/register", { name, email, password });
+    if (!data?.token || !isValidUser(data.user)) {
+      throw new Error("Resposta de autenticação inválida.");
+    }
     localStorage.setItem("gympe_token", data.token);
     setUser(data.user);
   };

@@ -40,8 +40,10 @@ export default function DashboardPage() {
       api.get("/dashboard/summary"),
       api.get("/transactions"),
     ]);
-    setData(summary.data);
-    const byMonth = transactions.data.reduce((acc, item) => {
+    const summaryData = summary?.data && typeof summary.data === "object" ? summary.data : {};
+    setData(summaryData);
+    const transactionsList = Array.isArray(transactions?.data) ? transactions.data : [];
+    const byMonth = transactionsList.reduce((acc, item) => {
       const key = new Date(item.date).toLocaleDateString("pt-BR", {
         month: "short",
         year: "2-digit",
@@ -73,7 +75,23 @@ export default function DashboardPage() {
     );
   }
 
-  const { financial, goals = [], weeklyProgress = [], rank, xp, disciplineScore, streak, spiritualStreak } = data;
+  const {
+    financial = {},
+    goals = [],
+    weeklyProgress = [],
+    rank = {},
+    xp = 0,
+    disciplineScore = 0,
+    streak = 0,
+    spiritualStreak = 0,
+    insights = [],
+  } = data;
+  const safeRank = {
+    level: rank?.level || 1,
+    title: rank?.title || "Iniciante",
+    progress: Number.isFinite(rank?.progress) ? rank.progress : 0,
+    next: rank?.next || null,
+  };
 
   const dailyGoals = goals.filter((g) => g.type === "daily").slice(0, 3);
   const weeklyGoals = goals.filter((g) => g.type === "weekly").slice(0, 3);
@@ -91,18 +109,18 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
-                <Zap className="h-3.5 w-3.5" /> Nível {rank.level} · {rank.title}
+                <Zap className="h-3.5 w-3.5" /> Nível {safeRank.level} · {safeRank.title}
               </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight">{xp} XP</h2>
               <p className="text-sm text-white/70">
-                {rank.next
-                  ? `Faltam ${rank.next.minXp - xp} XP para ${rank.next.title}`
+                {safeRank.next
+                  ? `Faltam ${safeRank.next.minXp - xp} XP para ${safeRank.next.title}`
                   : "Você atingiu o nível máximo! Continue inspirando."}
               </p>
               <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/15">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-white to-accent-400"
-                  style={{ width: `${rank.progress}%` }}
+                  style={{ width: `${safeRank.progress}%` }}
                 />
               </div>
             </div>
@@ -240,7 +258,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-end justify-between gap-2 pt-2">
-            {weeklyProgress.map((day) => (
+            {Array.isArray(weeklyProgress) ? weeklyProgress.map((day) => (
               <div key={day.date} className="flex flex-1 flex-col items-center gap-2">
                 <div className="flex h-40 w-full items-end justify-center rounded-xl bg-slate-100 dark:bg-white/5">
                   <div
@@ -251,7 +269,7 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{day.day}</p>
               </div>
-            ))}
+            )) : null}
           </div>
         </div>
       </section>
@@ -268,7 +286,7 @@ export default function DashboardPage() {
           <h3 className="text-lg font-semibold">Insights inteligentes</h3>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          {data.insights.map((insight) => (
+          {(Array.isArray(insights) ? insights : []).map((insight) => (
             <div
               key={insight}
               className="flex items-start gap-3 rounded-xl border border-slate-200/70 bg-slate-50 p-3 text-sm text-slate-700 dark:border-white/5 dark:bg-white/[0.03] dark:text-slate-200"

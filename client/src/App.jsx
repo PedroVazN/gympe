@@ -13,6 +13,7 @@ import SocialPage from './pages/SocialPage'
 
 function ProtectedLayout() {
   const { user, loading } = useAuth()
+  const validUser = Boolean(user && typeof user === "object" && (user.id || user._id))
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -20,7 +21,7 @@ function ProtectedLayout() {
       </div>
     )
   }
-  if (!user) return <Navigate to="/login" replace />
+  if (!validUser) return <Navigate to="/login" replace />
   return <Layout />
 }
 
